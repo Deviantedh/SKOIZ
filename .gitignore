@@ -1,0 +1,29 @@
+# Игнорировать картинки в корне, но разрешить картинки для отчетов в assets/images
+*.png
+*.jpeg
+*.jpg
+!assets/images/*
+dilation_demo.png
+dilation_crop_demo.png
+IMG_1521.jpeg
+
+# Исходные задания и материалы дисциплины
+LW*.pdf
+test-videos/
+
+# Системные файлы macOS
+.DS_Store
+._*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# IDE & Редакторы
+.vscode/
+.idea/
