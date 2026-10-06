@@ -10,6 +10,9 @@ IMG_1521.jpeg
 # Исходные задания и материалы дисциплины
 LW*.pdf
 test-videos/
+*.avi
+*.mp4
+*.mov
 
 # Системные файлы macOS
 .DS_Store
