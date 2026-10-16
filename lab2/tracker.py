@@ -1,29 +1,22 @@
 import cv2
 import numpy as np
 
-
+# рисуем читаемые текстовые метки
 def draw_styled_label(frame: np.ndarray, text: str, pt: tuple, font_scale: float = 0.8):
-    """
-    Отрисовка текста с черным контуром для идеальной читаемости на любом фоне.
-    """
+
     x, y = int(pt[0]), int(pt[1])
-    # Ограничение по границам кадра
     x = max(10, min(x, frame.shape[1] - 150))
     y = max(25, min(y, frame.shape[0] - 10))
 
     font = cv2.FONT_HERSHEY_SIMPLEX
-    # Черная обводка
+    # обводка
     cv2.putText(frame, text, (x, y), font, font_scale, (0, 0, 0), 4, cv2.LINE_AA)
-    # Белый текст
+    # текст
     cv2.putText(frame, text, (x, y), font, font_scale, (255, 255, 255), 2, cv2.LINE_AA)
 
 
+# Трекер на основе SIFT / ORB
 class KeypointTracker:
-    """
-    Детекторный трекер на основе сопоставления ключевых точек (SIFT / ORB).
-    На каждом кадре ищет объект путем сопоставления с шаблоном (Frame 0)
-    и оценки проективного преобразования (гомографии) методом RANSAC.
-    """
 
     def __init__(self, method: str = "sift", label: str = "Object", min_inliers: int = 8):
         self.method = method.lower()
@@ -81,7 +74,7 @@ class KeypointTracker:
                     if inliers_count >= self.min_inliers:
                         proj = cv2.perspectiveTransform(self.template_corners, H)
                         area = cv2.contourArea(np.int32(proj))
-                        # Геометрическая валидация: выпуклость и разумная площадь
+                        # Геометрическая валидация по выпуклости и разумной площади
                         if cv2.isContourConvex(np.int32(proj)) and 500 < area < (self.w0 * self.h0 * 2.0):
                             projected_corners = proj
                             tracked = True
@@ -91,12 +84,8 @@ class KeypointTracker:
         return tracked, projected_corners, inliers_count, inlier_points
 
 
+# Гибридный трекер: KLT и SIFT-релокализатор
 class HybridTracker:
-    """
-    Гибридный трекер: KLT (оптический поток Лукаса-Канаде) для плавного и
-    быстрого покадрового отслеживания + SIFT-релокализатор для автоматического
-    восстановления при размытии движения (motion blur) и срыве трекинга.
-    """
 
     def __init__(self, label: str = "Object", enable_relocalization: bool = True):
         self.label = label
@@ -137,7 +126,7 @@ class HybridTracker:
         relocalized = False
         inlier_points = []
 
-        # 1. Попытка покадрового трекинга через KLT (Optical Flow)
+        # Покадровый трекинг через KLT
         if self.is_tracking and self.p0 is not None and len(self.p0) >= 10:
             p1, status, _ = cv2.calcOpticalFlowPyrLK(
                 self.prev_gray,
@@ -167,7 +156,7 @@ class HybridTracker:
                             self.p0 = good_new.reshape(-1, 1, 2)
                             inlier_points = good_new
 
-        # 2. Если трекинг потерян или точек мало — запускаем SIFT-релокализацию (если включена)
+        # Если трекинг потерян или точек мало, то запускаем SIFT-релокализацию
         if self.enable_relocalization and (not tracked or (self.p0 is not None and len(self.p0) < 15)):
             kp_curr, des_curr = self.sift.detectAndCompute(gray, None)
             if des_curr is not None and len(kp_curr) >= 4:
@@ -214,13 +203,12 @@ class HybridTracker:
         return tracked, self.current_corners if tracked else None, len(inlier_points), inlier_points, relocalized
 
 
+# Рисуем рамку и подписи
 def draw_tracking_overlay(frame: np.ndarray, corners, inlier_points=None, label: str = "Object"):
-    """
-    Наносит на кадр зеленую ограничивающую рамку, подпись объекта и ключевые точки.
-    """
+
     vis = frame.copy()
 
-    # Рисуем ключевые точки (зеленые маркеры)
+    # Рисуем ключевые точки
     if inlier_points is not None:
         for pt in inlier_points:
             x, y = int(pt[0]), int(pt[1])
@@ -231,7 +219,7 @@ def draw_tracking_overlay(frame: np.ndarray, corners, inlier_points=None, label:
         pts = np.int32(corners).reshape((-1, 1, 2))
         cv2.polylines(vis, [pts], isClosed=True, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
 
-        # Подпись берем в левом верхнем углу рамки
+        # Подпись
         top_left = corners[0][0]
         draw_styled_label(vis, label, (top_left[0], top_left[1] - 8))
 

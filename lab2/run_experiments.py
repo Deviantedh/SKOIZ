@@ -7,13 +7,8 @@ import numpy as np
 from tracker import HybridTracker, KeypointTracker, draw_tracking_overlay
 
 
+# оценка метрик трекера по видео
 def evaluate_tracker(video_path: str, tracker_type: str, label: str = "Mona Lisa"):
-    """
-    Прогон трекера по видео с замером метрик:
-    - процент отслеженных кадров;
-    - среднее количество инлаеров/точек;
-    - FPS обработки.
-    """
     cap = cv2.VideoCapture(video_path)
     ret, frame0 = cap.read()
     if not ret:
@@ -26,7 +21,7 @@ def evaluate_tracker(video_path: str, tracker_type: str, label: str = "Mona Lisa
     elif tracker_type == "hybrid":
         tracker = HybridTracker(label=label)
     elif tracker_type == "klt_pure":
-        # KLT без релокализации
+        # klt без релокализации
         tracker = HybridTracker(label=label, enable_relocalization=False)
 
     tracker.set_template(frame0)
@@ -60,10 +55,8 @@ def evaluate_tracker(video_path: str, tracker_type: str, label: str = "Mona Lisa
     return ratio, avg_inliers, fps
 
 
+# генерация коллажа трекинга
 def generate_visual_demo(video_path: str, output_image_path: str, label: str = "Mona Lisa"):
-    """
-    Генерирует коллаж из ключевых кадров видео с наложенной рамкой трекинга.
-    """
     cap = cv2.VideoCapture(video_path)
     ret, frame0 = cap.read()
     if not ret:
@@ -75,7 +68,7 @@ def generate_visual_demo(video_path: str, output_image_path: str, label: str = "
     target_indices = [0, 50, 180, 320, 480, 550]
     saved_frames = {}
 
-    # Frame 0
+    # начальный кадр
     vis0 = draw_tracking_overlay(frame0, tracker.template_corners, label=label)
     saved_frames[0] = vis0
 
@@ -92,7 +85,6 @@ def generate_visual_demo(video_path: str, output_image_path: str, label: str = "
 
     cap.release()
 
-    # Сетка 2x3
     fig, axes = plt.subplots(2, 3, figsize=(15, 9))
     keys = sorted(saved_frames.keys())[:6]
 
@@ -100,35 +92,32 @@ def generate_visual_demo(video_path: str, output_image_path: str, label: str = "
         "Кадр 0: Шаблон (крупный план)",
         "Кадр 50: Начало движения камеры",
         "Кадр 180: Поворот и отдаление",
-        "Кадр 320: Сильное отдаление объекта",
-        "Кадр 480: Возвращение и приближение",
-        "Кадр 550: Финальная траектория",
+        "Кадр 320: Сильное отдаление",
+        "Кадр 480: Возвращение объекта",
+        "Кадр 550: Финал траектории",
     ]
 
     for ax, k, desc in zip(axes.ravel(), keys, descriptions):
         img_rgb = cv2.cvtColor(saved_frames[k], cv2.COLOR_BGR2RGB)
         ax.imshow(img_rgb)
-        ax.set_title(desc, fontsize=11, fontweight="bold")
+        ax.set_title(desc, fontsize=11)
         ax.axis("off")
 
-    plt.suptitle("Результаты трекинга картины 'Мона Лиза' (Hybrid KLT + SIFT)", fontsize=15, fontweight="bold")
+    plt.suptitle("Результаты трекинга (Hybrid KLT + SIFT)", fontsize=14)
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=180)
     plt.close()
     print(f"Коллаж трекинга сохранен: {output_image_path}")
 
 
+# сравнение klt и гибридного трекера при смазе
 def generate_blur_relocalization_demo(output_image_path: str):
-    """
-    Демонстрация срыва трекинга при размытии движения (motion blur)
-    и мгновенной релокализации через ключевые точки.
-    """
     cap = cv2.VideoCapture("test-videos/mona-lisa-blur-extra-credit.avi")
     ret, frame0 = cap.read()
     if not ret:
         return
 
-    # Запускаем два трекера параллельно: Pure KLT и Hybrid KLT+SIFT
+    # klt без релокализации и гибридный трекер
     klt = HybridTracker(label="Mona Lisa", enable_relocalization=False)
     klt.set_template(frame0)
 
@@ -136,7 +125,6 @@ def generate_blur_relocalization_demo(output_image_path: str):
     hybrid.set_template(frame0)
 
     frames_data = {}
-    # Момент размытия приходится примерно на кадры 205-235
     capture_frames = [190, 215, 240]
 
     idx = 0
@@ -163,38 +151,36 @@ def generate_blur_relocalization_demo(output_image_path: str):
 
     fig, axes = plt.subplots(3, 2, figsize=(13, 12))
     row_titles = [
-        "До смаза (Кадр 190): Стабильное ведение",
-        "Момент смаза (Кадр 215): Экстремальный Motion Blur",
-        "После смаза (Кадр 240): Выход из зоны смаза",
+        "До смаза (Кадр 190)",
+        "Момент смаза (Кадр 215)",
+        "После смаза (Кадр 240)",
     ]
 
     for row, f_idx in enumerate(capture_frames):
         d = frames_data[f_idx]
-        # Левая колонка: Pure KLT
+        # Pure KLT
         ax_left = axes[row, 0]
         ax_left.imshow(cv2.cvtColor(d["klt"], cv2.COLOR_BGR2RGB))
-        klt_label = "[Pure KLT: Рамка потеряна]" if not d["tracked_klt"] else "[Pure KLT: Отслеживание]"
+        klt_label = "Pure KLT: потеря объекта" if not d["tracked_klt"] else "Pure KLT: ведение"
         ax_left.set_title(f"{row_titles[row]}\n{klt_label}", fontsize=10, color="red" if not d["tracked_klt"] else "black")
         ax_left.axis("off")
 
-        # Правая колонка: Hybrid
+        # Hybrid
         ax_right = axes[row, 1]
         ax_right.imshow(cv2.cvtColor(d["hyb"], cv2.COLOR_BGR2RGB))
-        hyb_label = "[Hybrid: Восстановлен через SIFT!]" if row == 2 else "[Hybrid: Отслеживание]"
+        hyb_label = "Hybrid: релокализация через SIFT" if row == 2 else "Hybrid: ведение"
         ax_right.set_title(f"{row_titles[row]}\n{hyb_label}", fontsize=10, color="green" if row == 2 else "black")
         ax_right.axis("off")
 
-    plt.suptitle("Сравнение поведения при Motion Blur: Pure KLT vs Hybrid KLT+SIFT", fontsize=14, fontweight="bold")
+    plt.suptitle("Поведение при размытии: Pure KLT vs Hybrid KLT+SIFT", fontsize=13)
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=180)
     plt.close()
     print(f"Демонстрация релокализации сохранена: {output_image_path}")
 
 
+# тест на собственном сгенерированном видео
 def generate_custom_demo(output_image_path: str):
-    """
-    Демонстрация работы на собственном синтезированном/записанном объекте.
-    """
     video_path = "lab2/custom_test_video.avi"
     cap = cv2.VideoCapture(video_path)
     ret, frame0 = cap.read()
@@ -220,17 +206,17 @@ def generate_custom_demo(output_image_path: str):
 
     fig, axes = plt.subplots(1, 4, figsize=(16, 4))
     titles = [
-        "Кадр 0 (Шаблон книги)",
-        "Кадр 30 (Движение и ракурс)",
-        "Кадр 68 (Размытие движения)",
-        "Кадр 120 (Финал траектории)",
+        "Кадр 0 (Шаблон)",
+        "Кадр 30 (Движение)",
+        "Кадр 68 (Размытие)",
+        "Кадр 120 (Финал)",
     ]
     for ax, k, title in zip(axes, target_frames, titles):
         ax.imshow(cv2.cvtColor(saved[k], cv2.COLOR_BGR2RGB))
-        ax.set_title(title, fontsize=11, fontweight="bold")
+        ax.set_title(title, fontsize=11)
         ax.axis("off")
 
-    plt.suptitle("Тестирование на собственном видео (обложка книги)", fontsize=14, fontweight="bold")
+    plt.suptitle("Тестирование на собственном видео", fontsize=13)
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=180)
     plt.close()
@@ -238,7 +224,7 @@ def generate_custom_demo(output_image_path: str):
 
 
 def main():
-    os.makedirs("assets/images", exist_ok=True)
+    os.makedirs("lab2/results", exist_ok=True)
 
     videos = [
         ("Оригинал (mona-lisa.avi)", "test-videos/mona-lisa.avi"),
@@ -255,16 +241,16 @@ def main():
 
     results_table = {}
 
-    print("=== Запуск сравнительного тестирования алгоритмов трекинга ===")
+    print("* Запуск тестирования алгоритмов трекинга")
     for v_name, v_path in videos:
         results_table[v_name] = {}
-        print(f"\nТестирование на видео: {v_name}")
+        print(f"\nВидео: {v_name}")
         for m_name, m_type in methods:
             ratio, inliers, fps = evaluate_tracker(v_path, m_type)
             results_table[v_name][m_name] = {"ratio": ratio, "inliers": inliers, "fps": fps}
-            print(f"  [{m_name:18s}] Отслежено: {ratio:5.1f}% | Ср. точек: {inliers:4.1f} | Скорость: {fps:4.1f} FPS")
+            print(f"  [{m_name:18s}] Отслежено: {ratio:5.1f}% | Точек: {inliers:4.1f} | Скорость: {fps:4.1f} FPS")
 
-    # Построение графика сравнения качества трекинга (% отслеженных кадров)
+    # график сравнения
     labels = [v[0].split(" ")[0] for v in videos]
     x = np.arange(len(labels))
     width = 0.2
@@ -278,25 +264,25 @@ def main():
 
     plt.ylabel("% успешно отслеженных кадров", fontsize=12)
     plt.xlabel("Тестовое видео", fontsize=12)
-    plt.title("Сравнение устойчивости алгоритмов трекинга к Motion Blur", fontsize=14, fontweight="bold")
+    plt.title("Сравнение устойчивости алгоритмов трекинга", fontsize=13)
     plt.xticks(x, [v[0] for v in videos], fontsize=10)
     plt.ylim(0, 110)
     plt.legend(fontsize=11)
     plt.grid(axis="y", linestyle="--", alpha=0.7)
     plt.tight_layout()
 
-    chart_path = "assets/images/lab2_comparison_chart.png"
+    chart_path = "lab2/results/lab2_comparison_chart.png"
     plt.savefig(chart_path, dpi=180)
     plt.close()
     print(f"График сравнения сохранен: {chart_path}")
 
-    # Генерация наглядных коллажей
+    # сохранение кадров
     print("\nГенерация демонстрационных кадров...")
-    generate_visual_demo("test-videos/mona-lisa.avi", "assets/images/lab2_tracking_demo.png")
-    generate_blur_relocalization_demo("assets/images/lab2_blur_relocalization.png")
-    generate_custom_demo("assets/images/lab2_custom_demo.png")
+    generate_visual_demo("test-videos/mona-lisa.avi", "lab2/results/lab2_tracking_demo.png")
+    generate_blur_relocalization_demo("lab2/results/lab2_blur_relocalization.png")
+    generate_custom_demo("lab2/results/lab2_custom_demo.png")
 
-    print("\nВсе эксперименты успешно завершены!")
+    print("\nЭксперименты завершены")
 
 
 if __name__ == "__main__":

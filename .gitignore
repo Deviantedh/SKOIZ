@@ -1,8 +1,8 @@
-# Игнорировать картинки в корне, но разрешить картинки для отчетов в assets/images
+# Игнорировать временные картинки, но оставить результаты лаб
 *.png
 *.jpeg
 *.jpg
-!assets/images/*
+!lab*/results/*
 dilation_demo.png
 dilation_crop_demo.png
 IMG_1521.jpeg

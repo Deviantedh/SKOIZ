@@ -4,37 +4,29 @@ import numba
 import numpy as np
 
 
+# Делаем бинаризацию изображения (инвертировано)
 def binarize_image(image_gray: np.ndarray, threshold_type: str = "adaptive") -> np.ndarray:
-    """
-    Бинаризация полутонового изображения.
-    По заданию: бинаризацию можно не реализовывать вручную.
-    Для текста платежки инвертируем, чтобы буквы были белыми (255), а фон черным (0),
-    так как дилатация наращивает белые пиксели (объекты переднего плана).
-    """
     if threshold_type == "otsu":
         _, binary = cv2.threshold(image_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     else:
-        # Адаптивный порог (отлично нивелирует тени и неравномерность освещения)
+        # порог с адаптацией
         binary = cv2.adaptiveThreshold(
             image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 10
         )
     return binary
 
 
+# реализация через библиотеку OpenCV.
 def dilate_library(binary_image: np.ndarray, kernel: np.ndarray = None, iterations: int = 1) -> np.ndarray:
-    """
-    Библиотечная реализация морфологической дилатации с помощью OpenCV.
-    """
     if kernel is None:
         kernel = np.ones((3, 3), dtype=np.uint8)
     return cv2.dilate(binary_image, kernel, iterations=iterations)
 
 
+# реализация векторной дилатации со структурным элементом 3*3
+# считаем локальный максимум через сдвиги срезов.
 def dilate_native_vectorized(binary_image: np.ndarray, kernel: np.ndarray = None, iterations: int = 1) -> np.ndarray:
-    """
-    Нативная векторизованная реализация дилатации со структурным элементом 3x3 на Python / NumPy.
-    Вычисляет локальный максимум в окрестности 3x3 через сдвиги срезов.
-    """
+
     if kernel is None:
         kernel = np.ones((3, 3), dtype=np.uint8)
 
@@ -57,13 +49,10 @@ def dilate_native_vectorized(binary_image: np.ndarray, kernel: np.ndarray = None
 
     return current_img
 
-
+# Низкоуровневый обход пикселей вложенными циклами (попиксельная без векторов)
 @numba.njit(fastmath=True)
 def _dilate_loops_numba(padded: np.ndarray, kernel: np.ndarray, h: int, w: int) -> np.ndarray:
-    """
-    Низкоуровневый обход пикселей вложенными циклами (компилируется в машинный код через LLVM).
-    Демонстрирует классический попиксельный алгоритм без векторизации.
-    """
+
     output = np.zeros((h, w), dtype=np.uint8)
     for y in range(h):
         for x in range(w):
@@ -77,11 +66,9 @@ def _dilate_loops_numba(padded: np.ndarray, kernel: np.ndarray, h: int, w: int) 
             output[y, x] = max_val
     return output
 
-
+# реализация попиксельной дилатации (нативная)
 def dilate_native_pixelwise(binary_image: np.ndarray, kernel: np.ndarray = None, iterations: int = 1) -> np.ndarray:
-    """
-    Нативная попиксельная реализация дилатации (структурный элемент 3x3).
-    """
+
     if kernel is None:
         kernel = np.ones((3, 3), dtype=np.uint8)
 

@@ -2,26 +2,21 @@ import cv2
 import numpy as np
 
 
+# генерация тестового видео с текстурированным объектом
 def create_synthetic_custom_video(output_path: str = "lab2/custom_test_video.avi", num_frames: int = 150):
-    """
-    Генерирует реалистичное тестовое видео с плоским текстурированным объектом
-    (книга / арт-обложка) на деревянной текстуре стола с движением камеры,
-    перспективным искажением и эффектом размытия движения (motion blur).
-    Первый кадр (frame 0) — крупный план объекта.
-    """
     width, height = 640, 360
     fps = 30.0
 
-    # 1. Создаем детальную обложку объекта (разрешение 320x240)
+    # текстура обложки
     obj_w, obj_h = 320, 240
     obj_img = np.zeros((obj_h, obj_w, 3), dtype=np.uint8)
 
-    # Градиентный фон обложки
+    # градиентный фон
     for y in range(obj_h):
         for x in range(obj_w):
             obj_img[y, x] = [int(120 + 80 * (x / obj_w)), int(60 + 60 * (y / obj_h)), 180]
 
-    # Добавляем контрастные геометрические узоры и текст для богатой текстуры
+    # геометрические узоры и текст
     cv2.rectangle(obj_img, (20, 20), (obj_w - 20, obj_h - 20), (255, 255, 255), 3)
     cv2.circle(obj_img, (160, 120), 55, (0, 220, 255), -1)
     cv2.rectangle(obj_img, (130, 90), (190, 150), (255, 50, 50), -1)
@@ -33,39 +28,33 @@ def create_synthetic_custom_video(output_path: str = "lab2/custom_test_video.avi
     cv2.putText(obj_img, "COMPUTER", (45, 60), cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2)
     cv2.putText(obj_img, "VISION", (75, 210), cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 2)
 
-    # 2. Создаем текстурный фон «деревянного стола»
+    # текстурный фон
     table_bg = np.zeros((height, width, 3), dtype=np.uint8)
     for y in range(height):
-        # Древесный тон с прожилками
         val = int(80 + 30 * np.sin(y / 8.0) + 15 * np.cos(y / 3.0))
         table_bg[y, :] = [val // 2, val, val + 40]
 
-    # Шум текстуры стола
     noise = np.random.randint(-15, 15, (height, width, 3), dtype=np.int16)
     table_bg = np.clip(table_bg.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 
     fourcc = cv2.VideoWriter_fourcc(*"MJPG")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    # Кадр 0: крупный план самого объекта во весь кадр
+    # начальный крупный план
     frame0 = cv2.resize(obj_img, (width, height))
     out.write(frame0)
 
-    # Исходные 4 угла объекта
     src_corners = np.float32([[0, 0], [obj_w - 1, 0], [obj_w - 1, obj_h - 1], [0, obj_h - 1]])
 
-    # Кадры 1..num_frames: камера отдаляется, поворачивается, двигается
+    # кадры движения камеры
     for t in range(1, num_frames + 1):
         progress = t / float(num_frames)
-        # Центр объекта плавно смещается
         cx = 320 + 70 * np.sin(progress * 2 * np.pi)
         cy = 180 + 40 * np.cos(progress * 2 * np.pi)
 
-        # Масштаб уменьшается (камера отдаляется)
         scale = 0.9 - 0.35 * np.sin(progress * np.pi)
         angle = np.radians(25 * np.sin(progress * 2 * np.pi))
 
-        # 4 перспективных угла
         hw = (obj_w * scale) / 2.0
         hh = (obj_h * scale) / 2.0
 
@@ -73,7 +62,6 @@ def create_synthetic_custom_video(output_path: str = "lab2/custom_test_video.avi
         dx_w, dy_w = hw * cos_a, hw * sin_a
         dx_h, dy_h = -hh * sin_a, hh * cos_a
 
-        # Небольшая 3D перспектива
         tilt = 0.15 * np.cos(progress * np.pi)
 
         dst_corners = np.float32(
@@ -88,14 +76,13 @@ def create_synthetic_custom_video(output_path: str = "lab2/custom_test_video.avi
         M = cv2.getPerspectiveTransform(src_corners, dst_corners)
         warped_obj = cv2.warpPerspective(obj_img, M, (width, height))
 
-        # Маска для наложения
         obj_mask = cv2.warpPerspective(np.ones((obj_h, obj_w), dtype=np.uint8) * 255, M, (width, height))
         _, obj_mask = cv2.threshold(obj_mask, 128, 255, cv2.THRESH_BINARY)
 
         frame = table_bg.copy()
         frame[obj_mask > 0] = warped_obj[obj_mask > 0]
 
-        # На кадрах 60-75 симулируем резкое движение (motion blur)
+        # эффект смаза движения
         if 60 <= t <= 75:
             ksize = 17
             kernel_mb = np.zeros((ksize, ksize))
@@ -106,7 +93,7 @@ def create_synthetic_custom_video(output_path: str = "lab2/custom_test_video.avi
         out.write(frame)
 
     out.release()
-    print(f"Пользовательское видео успешно сгенерировано: {output_path} ({num_frames + 1} кадров)")
+    print(f"Видео сохранено: {output_path} ({num_frames + 1} кадров)")
 
 
 if __name__ == "__main__":

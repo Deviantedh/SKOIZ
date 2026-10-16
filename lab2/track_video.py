@@ -119,7 +119,7 @@ def main():
     if args.show:
         cv2.destroyAllWindows()
 
-    print("\n=== Результаты трекинга ===")
+    print("\n* Результаты трекинга ")
     print(f"Всего кадров: {frame_idx + 1}")
     print(f"Отслежено кадров: {tracked_count + 1} ({(tracked_count + 1) / (frame_idx + 1) * 100:.1f}%)")
     print(f"Средняя скорость обработки: {(frame_idx + 1) / elapsed:.1f} FPS")
