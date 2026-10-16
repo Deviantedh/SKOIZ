@@ -49,7 +49,7 @@ def dilate_native_vectorized(binary_image: np.ndarray, kernel: np.ndarray = None
 
     return current_img
 
-# Низкоуровневый обход пикселей вложенными циклами (попиксельная без векторов)
+# реализация через низкоуровневый обход пикселей вложенными циклами
 @numba.njit(fastmath=True)
 def _dilate_loops_numba(padded: np.ndarray, kernel: np.ndarray, h: int, w: int) -> np.ndarray:
 

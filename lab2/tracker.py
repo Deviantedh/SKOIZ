@@ -37,13 +37,19 @@ class KeypointTracker:
         self.template_corners = None
         self.h0, self.w0 = 0, 0
 
-    def set_template(self, frame: np.ndarray):
+    def set_template(self, frame: np.ndarray, corners: np.ndarray = None):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
         self.h0, self.w0 = gray.shape[:2]
-        self.template_kp, self.template_des = self.detector.detectAndCompute(gray, None)
-        self.template_corners = np.float32(
-            [[0, 0], [self.w0 - 1, 0], [self.w0 - 1, self.h0 - 1], [0, self.h0 - 1]]
-        ).reshape(-1, 1, 2)
+        if corners is not None:
+            self.template_corners = np.float32(corners).reshape(-1, 1, 2)
+            mask = np.zeros_like(gray)
+            cv2.fillPoly(mask, [np.int32(self.template_corners)], 255)
+            self.template_kp, self.template_des = self.detector.detectAndCompute(gray, mask)
+        else:
+            self.template_kp, self.template_des = self.detector.detectAndCompute(gray, None)
+            self.template_corners = np.float32(
+                [[0, 0], [self.w0 - 1, 0], [self.w0 - 1, self.h0 - 1], [0, self.h0 - 1]]
+            ).reshape(-1, 1, 2)
 
     def process_frame(self, frame: np.ndarray):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
@@ -74,8 +80,9 @@ class KeypointTracker:
                     if inliers_count >= self.min_inliers:
                         proj = cv2.perspectiveTransform(self.template_corners, H)
                         area = cv2.contourArea(np.int32(proj))
+                        tmpl_area = cv2.contourArea(np.int32(self.template_corners))
                         # Геометрическая валидация по выпуклости и разумной площади
-                        if cv2.isContourConvex(np.int32(proj)) and 500 < area < (self.w0 * self.h0 * 2.0):
+                        if cv2.isContourConvex(np.int32(proj)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
                             projected_corners = proj
                             tracked = True
                             mask_flat = mask.ravel()
@@ -105,18 +112,26 @@ class HybridTracker:
         self.is_tracking = False
         self.reloc_counter = 0
 
-    def set_template(self, frame: np.ndarray):
+    def set_template(self, frame: np.ndarray, corners: np.ndarray = None):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if len(frame.shape) == 3 else frame
         self.template_gray = gray
         self.h0, self.w0 = gray.shape[:2]
-        self.template_kp, self.template_des = self.sift.detectAndCompute(gray, None)
-        self.template_corners = np.float32(
-            [[0, 0], [self.w0 - 1, 0], [self.w0 - 1, self.h0 - 1], [0, self.h0 - 1]]
-        ).reshape(-1, 1, 2)
-        self.current_corners = self.template_corners.copy()
 
-        # Инициализируем ключевые точки для KLT
-        self.p0 = cv2.goodFeaturesToTrack(gray, maxCorners=300, qualityLevel=0.01, minDistance=8)
+        if corners is not None:
+            self.template_corners = np.float32(corners).reshape(-1, 1, 2)
+            mask = np.zeros_like(gray)
+            cv2.fillPoly(mask, [np.int32(self.template_corners)], 255)
+            self.template_kp, self.template_des = self.sift.detectAndCompute(gray, mask)
+            self.current_corners = self.template_corners.copy()
+            self.p0 = cv2.goodFeaturesToTrack(gray, maxCorners=300, qualityLevel=0.01, minDistance=8, mask=mask)
+        else:
+            self.template_kp, self.template_des = self.sift.detectAndCompute(gray, None)
+            self.template_corners = np.float32(
+                [[0, 0], [self.w0 - 1, 0], [self.w0 - 1, self.h0 - 1], [0, self.h0 - 1]]
+            ).reshape(-1, 1, 2)
+            self.current_corners = self.template_corners.copy()
+            self.p0 = cv2.goodFeaturesToTrack(gray, maxCorners=300, qualityLevel=0.01, minDistance=8)
+
         self.prev_gray = gray
         self.is_tracking = True
 
@@ -145,7 +160,8 @@ class HybridTracker:
                 if H is not None:
                     cand = cv2.perspectiveTransform(self.current_corners, H)
                     area = cv2.contourArea(np.int32(cand))
-                    if cv2.isContourConvex(np.int32(cand)) and 500 < area < (self.w0 * self.h0 * 2.0):
+                    tmpl_area = cv2.contourArea(np.int32(self.template_corners))
+                    if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
                         self.current_corners = cand
                         tracked = True
                         if mask is not None:
@@ -179,7 +195,8 @@ class HybridTracker:
                         if inliers_cnt >= 8:
                             cand = cv2.perspectiveTransform(self.template_corners, H_reloc)
                             area = cv2.contourArea(np.int32(cand))
-                            if cv2.isContourConvex(np.int32(cand)) and 500 < area < (self.w0 * self.h0 * 2.0):
+                            tmpl_area = cv2.contourArea(np.int32(self.template_corners))
+                            if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
                                 self.current_corners = cand
                                 tracked = True
                                 relocalized = True

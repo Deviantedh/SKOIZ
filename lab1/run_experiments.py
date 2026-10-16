@@ -13,7 +13,7 @@ from dilation import (
 
 
 def main():
-    image_path = "lab1/IMG_8839.jpeg"
+    image_path = "IMG_8839.jpeg"
     if not os.path.exists(image_path):
         print(f"Error: {image_path} not found")
         return
@@ -25,7 +25,6 @@ def main():
     # бинаризация
     binary = binarize_image(img_gray, threshold_type="adaptive")
 
-    # вырезаем фрагмент с текстом
     h, w = binary.shape
     crop_y1, crop_y2 = int(h * 0.40), int(h * 0.58)
     crop_x1, crop_x2 = int(w * 0.45), int(w * 0.60)

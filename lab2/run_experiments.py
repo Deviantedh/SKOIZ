@@ -179,19 +179,21 @@ def generate_blur_relocalization_demo(output_image_path: str):
     print(f"Демонстрация релокализации сохранена: {output_image_path}")
 
 
-# тест на собственном сгенерированном видео
+# тест на собственном записанном видео
 def generate_custom_demo(output_image_path: str):
-    video_path = "lab2/custom_test_video.avi"
+    video_path = "lab2/IMG_1707.MOV"
     cap = cv2.VideoCapture(video_path)
     ret, frame0 = cap.read()
     if not ret:
         return
 
-    tracker = HybridTracker(label="Computer Vision")
-    tracker.set_template(frame0)
+    # координаты памятки на первом кадре
+    corners0 = np.float32([[925, 332], [1302, 441], [1195, 660], [805, 545]]).reshape(-1, 1, 2)
+    tracker = HybridTracker(label="Document")
+    tracker.set_template(frame0, corners=corners0)
 
-    target_frames = [0, 30, 68, 120]
-    saved = {0: draw_tracking_overlay(frame0, tracker.template_corners, label="Book Cover")}
+    target_frames = [0, 50, 380, 620]
+    saved = {0: draw_tracking_overlay(frame0, corners0, label="Document")}
     idx = 0
     while True:
         ret, frame = cap.read()
@@ -200,23 +202,23 @@ def generate_custom_demo(output_image_path: str):
         idx += 1
         tracked, corners, n_pts, inliers, _ = tracker.process_frame(frame)
         if idx in target_frames:
-            saved[idx] = draw_tracking_overlay(frame, corners, inliers, label="Book Cover")
+            saved[idx] = draw_tracking_overlay(frame, corners, inliers, label="Document")
 
     cap.release()
 
     fig, axes = plt.subplots(1, 4, figsize=(16, 4))
     titles = [
-        "Кадр 0 (Шаблон)",
-        "Кадр 30 (Движение)",
-        "Кадр 68 (Размытие)",
-        "Кадр 120 (Финал)",
+        "Кадр 0 (Шаблон документа)",
+        "Кадр 50 (Движение и ракурс)",
+        "Кадр 380 (Отдаление камеры)",
+        "Кадр 620 (Поворот и наклон)",
     ]
     for ax, k, title in zip(axes, target_frames, titles):
         ax.imshow(cv2.cvtColor(saved[k], cv2.COLOR_BGR2RGB))
         ax.set_title(title, fontsize=11)
         ax.axis("off")
 
-    plt.suptitle("Тестирование на собственном видео", fontsize=13)
+    plt.suptitle("Тестирование на собственном видео (памятка на ткани)", fontsize=13)
     plt.tight_layout()
     plt.savefig(output_image_path, dpi=180)
     plt.close()
