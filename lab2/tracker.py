@@ -91,7 +91,7 @@ class KeypointTracker:
         return tracked, projected_corners, inliers_count, inlier_points
 
 
-# Гибридный трекер: KLT и SIFT-релокализатор
+# Гибридный трекер KLT и SIFT
 class HybridTracker:
 
     def __init__(self, label: str = "Object", enable_relocalization: bool = True):
