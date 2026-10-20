@@ -120,6 +120,13 @@ $$x' \sim H x$$
 
 Гибридный трекер уверенно удерживает границы документа на протяжении всей видеозаписи.
 
+### 3.5. Сохраненные видео с рамкой трекера
+В папку `results/` сохранены полные размеченные видеозаписи с рамкой трекинга для каждого видео:
+- [`mona-lisa_tracked.mp4`](results/mona-lisa_tracked.mp4) — исходное тестовое видео;
+- [`mona-lisa-blur_tracked.mp4`](results/mona-lisa-blur_tracked.mp4) — видео с участком размытия;
+- [`mona-lisa-blur-extra-credit_tracked.mp4`](results/mona-lisa-blur-extra-credit_tracked.mp4) — видео с повторным смазом и релокализацией;
+- [`custom_video_tracked.mp4`](results/custom_video_tracked.mp4) — видео с собственным объектом.
+
 ---
 
 ## 4. Запуск

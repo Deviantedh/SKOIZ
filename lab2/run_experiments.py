@@ -223,6 +223,43 @@ def generate_custom_demo(output_image_path: str):
     print(f"Демонстрация собственного видео сохранена: {output_image_path}")
 
 
+# сохранение размеченного видео с рамкой
+def render_and_save_video(video_path: str, output_path: str, label: str = "Object", corners0: np.ndarray = None):
+    cap = cv2.VideoCapture(video_path)
+    ret, frame0 = cap.read()
+    if not ret:
+        print(f"Ошибка чтения видео: {video_path}")
+        return
+
+    tracker = HybridTracker(label=label)
+    tracker.set_template(frame0, corners=corners0)
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    # используем mp4v для компактного размера и совместимости
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    vis0 = draw_tracking_overlay(frame0, tracker.template_corners, label=label)
+    writer.write(vis0)
+
+    count = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        count += 1
+        tracked, corners, n_pts, inliers, _ = tracker.process_frame(frame)
+        vis = draw_tracking_overlay(frame, corners, inliers, label=label)
+        writer.write(vis)
+
+    cap.release()
+    writer.release()
+    print(f"Видео сохранено: {output_path} ({count + 1} кадров)")
+
+
 def main():
     os.makedirs("lab2/results", exist_ok=True)
 
@@ -281,6 +318,15 @@ def main():
     generate_visual_demo("test-videos/mona-lisa.avi", "lab2/results/lab2_tracking_demo.png")
     generate_blur_relocalization_demo("lab2/results/lab2_blur_relocalization.png")
     generate_custom_demo("lab2/results/lab2_custom_demo.png")
+
+    # сохранение размеченных видео с рамкой в папку результатов
+    print("\nСохранение размеченных видео с рамкой в lab2/results/...")
+    render_and_save_video("test-videos/mona-lisa.avi", "lab2/results/mona-lisa_tracked.mp4", label="Mona Lisa")
+    render_and_save_video("test-videos/mona-lisa-blur.avi", "lab2/results/mona-lisa-blur_tracked.mp4", label="Mona Lisa")
+    render_and_save_video("test-videos/mona-lisa-blur-extra-credit.avi", "lab2/results/mona-lisa-blur-extra-credit_tracked.mp4", label="Mona Lisa")
+
+    corners_custom = np.float32([[925, 332], [1302, 441], [1195, 660], [805, 545]]).reshape(-1, 1, 2)
+    render_and_save_video("lab2/IMG_1707.MOV", "lab2/results/custom_video_tracked.mp4", label="Document", corners0=corners_custom)
 
     print("\nЭксперименты завершены")
 
