@@ -89,12 +89,12 @@ def generate_visual_demo(video_path: str, output_image_path: str, label: str = "
     keys = sorted(saved_frames.keys())[:6]
 
     descriptions = [
-        "Кадр 0: Шаблон (крупный план)",
-        "Кадр 50: Начало движения камеры",
-        "Кадр 180: Поворот и отдаление",
-        "Кадр 320: Сильное отдаление",
-        "Кадр 480: Возвращение объекта",
-        "Кадр 550: Финал траектории",
+        "Кадр 0",
+        "Кадр 50",
+        "Кадр 180",
+        "Кадр 320",
+        "Кадр 480",
+        "Кадр 550",
     ]
 
     for ax, k, desc in zip(axes.ravel(), keys, descriptions):
@@ -151,9 +151,9 @@ def generate_blur_relocalization_demo(output_image_path: str):
 
     fig, axes = plt.subplots(3, 2, figsize=(13, 12))
     row_titles = [
-        "До смаза (Кадр 190)",
-        "Момент смаза (Кадр 215)",
-        "После смаза (Кадр 240)",
+        "Кадр 190",
+        "Кадр 215",
+        "Кадр 240",
     ]
 
     for row, f_idx in enumerate(capture_frames):
@@ -161,15 +161,13 @@ def generate_blur_relocalization_demo(output_image_path: str):
         # Pure KLT
         ax_left = axes[row, 0]
         ax_left.imshow(cv2.cvtColor(d["klt"], cv2.COLOR_BGR2RGB))
-        klt_label = "Pure KLT: потеря объекта" if not d["tracked_klt"] else "Pure KLT: ведение"
-        ax_left.set_title(f"{row_titles[row]}\n{klt_label}", fontsize=10, color="red" if not d["tracked_klt"] else "black")
+        ax_left.set_title(f"{row_titles[row]} (Pure KLT)", fontsize=11)
         ax_left.axis("off")
 
         # Hybrid
         ax_right = axes[row, 1]
         ax_right.imshow(cv2.cvtColor(d["hyb"], cv2.COLOR_BGR2RGB))
-        hyb_label = "Hybrid: релокализация через SIFT" if row == 2 else "Hybrid: ведение"
-        ax_right.set_title(f"{row_titles[row]}\n{hyb_label}", fontsize=10, color="green" if row == 2 else "black")
+        ax_right.set_title(f"{row_titles[row]} (Hybrid)", fontsize=11)
         ax_right.axis("off")
 
     plt.suptitle("Поведение при размытии: Pure KLT vs Hybrid KLT+SIFT", fontsize=13)

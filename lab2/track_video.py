@@ -7,7 +7,7 @@ from tracker import HybridTracker, KeypointTracker, draw_tracking_overlay
 
 def main():
     parser = argparse.ArgumentParser(description="Трекинг плоского объекта на видео по первому кадру.")
-    parser.add_argument("--video", type=str, default="test-videos/mona-lisa.avi", help="Путь к видеофайлу")
+    parser.add_argument("--video", type=str, default="test-videos/mona-lisa.avi", help="Путь к видео")
     parser.add_argument(
         "--tracker", type=str, default="hybrid", choices=["hybrid", "sift", "orb"], help="Тип алгоритма трекинга"
     )
