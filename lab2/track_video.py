@@ -8,55 +8,23 @@ from tracker import HybridTracker, KeypointTracker, draw_tracking_overlay
 def main():
     parser = argparse.ArgumentParser(description="Трекинг плоского объекта на видео по первому кадру.")
     parser.add_argument("--video", type=str, default="test-videos/mona-lisa.avi", help="Путь к видеофайлу")
-    parser.add_argument("--webcam", action="store_true", help="Использовать веб-камеру")
-    parser.add_argument("--camera-id", type=int, default=0, help="ID веб-камеры")
     parser.add_argument(
         "--tracker", type=str, default="hybrid", choices=["hybrid", "sift", "orb"], help="Тип алгоритма трекинга"
     )
-    parser.add_argument("--label", type=str, default="Mona Lisa", help="Подпись для найденного объекта")
+    parser.add_argument("--label", type=str, default="Object", help="Подпись для найденного объекта")
     parser.add_argument("--output", type=str, default=None, help="Путь для сохранения размеченного видео")
     parser.add_argument("--show", action="store_true", help="Отображать окно воспроизведения (GUI)")
 
     args = parser.parse_args()
 
-    if args.webcam:
-        print(f"Подключение к веб-камере #{args.camera_id}...")
-        cap = cv2.VideoCapture(args.camera_id)
-        print("Инструкция: наведите камеру на плоский объект (книгу/картину) и нажмите ПРОБЕЛ для захвата шаблона.")
-        template_captured = False
-        while not template_captured:
-            ret, frame = cap.read()
-            if not ret:
-                print("Ошибка чтения с веб-камеры.")
-                sys.exit(1)
-            preview = frame.copy()
-            cv2.putText(
-                preview,
-                "Press SPACE to capture object",
-                (30, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2,
-            )
-            cv2.imshow("Capture Template", preview)
-            key = cv2.waitKey(1) & 0xFF
-            if key == 32:  # Space
-                frame0 = frame.copy()
-                template_captured = True
-                cv2.destroyWindow("Capture Template")
-            elif key == 27 or key == ord("q"):
-                cap.release()
-                sys.exit(0)
-    else:
-        print(f"Открытие видео: {args.video}...")
-        cap = cv2.VideoCapture(args.video)
-        ret, frame0 = cap.read()
-        if not ret:
-            print(f"Ошибка: не удалось прочитать первый кадр видео '{args.video}'.")
-            sys.exit(1)
+    print(f"Открытие видео: {args.video}...")
+    cap = cv2.VideoCapture(args.video)
+    ret, frame0 = cap.read()
+    if not ret:
+        print(f"Ошибка: не удалось прочитать первый кадр видео '{args.video}'.")
+        sys.exit(1)
 
-    # Инициализация выбранного трекера
+    # Инициализация трекера
     if args.tracker == "hybrid":
         tracker = HybridTracker(label=args.label)
     else:
@@ -80,7 +48,7 @@ def main():
     frame_idx = 0
     t_start = time.time()
 
-    # Первый кадр тоже записываем
+    # Первый кадр
     vis0 = draw_tracking_overlay(frame0, tracker.template_corners if hasattr(tracker, 'template_corners') else None, label=args.label)
     if writer:
         writer.write(vis0)
