@@ -82,7 +82,7 @@ class KeypointTracker:
                         area = cv2.contourArea(np.int32(proj))
                         tmpl_area = cv2.contourArea(np.int32(self.template_corners))
                         # Геометрическая валидация по выпуклости и разумной площади
-                        if cv2.isContourConvex(np.int32(proj)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                        if cv2.isContourConvex(np.int32(proj)) and 500 < area < 4.0 * tmpl_area:
                             projected_corners = proj
                             tracked = True
                             mask_flat = mask.ravel()
@@ -161,7 +161,7 @@ class HybridTracker:
                     cand = cv2.perspectiveTransform(self.current_corners, H)
                     area = cv2.contourArea(np.int32(cand))
                     tmpl_area = cv2.contourArea(np.int32(self.template_corners))
-                    if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                    if cv2.isContourConvex(np.int32(cand)) and 500 < area < 4.0 * tmpl_area:
                         self.current_corners = cand
                         tracked = True
                         if mask is not None:
@@ -196,7 +196,7 @@ class HybridTracker:
                             cand = cv2.perspectiveTransform(self.template_corners, H_reloc)
                             area = cv2.contourArea(np.int32(cand))
                             tmpl_area = cv2.contourArea(np.int32(self.template_corners))
-                            if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                            if cv2.isContourConvex(np.int32(cand)) and 500 < area < 4.0 * tmpl_area:
                                 self.current_corners = cand
                                 tracked = True
                                 relocalized = True

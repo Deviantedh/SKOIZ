@@ -146,8 +146,8 @@ class KeypointTracker:
                         
                         # Геометрическая валидация (защита от ложных "вывернутых" рамок):
                         # 1. cv2.isContourConvex: контур должен быть выпуклым (не "бантик" и не самопересечение)
-                        # 2. Площадь должна быть адекватной (от 15% до 400% от размера шаблона)
-                        if cv2.isContourConvex(np.int32(proj)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                        # 2. Площадь должна быть адекватной (от 500 пикселей до 400% от шаблона)
+                        if cv2.isContourConvex(np.int32(proj)) and 500 < area < 4.0 * tmpl_area:
                             projected_corners = proj  # Сохраняем найденную рамку
                             tracked = True            # Ставим флаг: объект успешно найден!
                             mask_flat = mask.ravel()  # Разворачиваем маску в одномерный массив
@@ -260,7 +260,7 @@ class HybridTracker:
                     tmpl_area = cv2.contourArea(np.int32(self.template_corners))
                     
                     # Проверяем геометрию: рамка должна быть выпуклой и адекватного размера
-                    if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                    if cv2.isContourConvex(np.int32(cand)) and 500 < area < 4.0 * tmpl_area:
                         self.current_corners = cand  # Обновляем координаты рамки
                         tracked = True               # Трекинг успешен!
                         
@@ -312,7 +312,7 @@ class HybridTracker:
                             tmpl_area = cv2.contourArea(np.int32(self.template_corners))
                             
                             # Валидация выпуклости и площади
-                            if cv2.isContourConvex(np.int32(cand)) and 0.15 * tmpl_area < area < 4.0 * tmpl_area:
+                            if cv2.isContourConvex(np.int32(cand)) and 500 < area < 4.0 * tmpl_area:
                                 self.current_corners = cand  # Восстанавливаем рамку!
                                 tracked = True               # Объект снова найден!
                                 relocalized = True          # Отмечаем, что сработала релокализация
